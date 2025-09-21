@@ -1252,7 +1252,6 @@ int main()
 {
     // --- Initialization ---
     InitWindow(1280, 720, "Raylib Rockets Benchmark");
-    SetTargetFPS(144);
     rlImGuiSetup(true);
 
     txSmoke  = LoadTexture("resources/pSmoke.png");
@@ -1280,8 +1279,8 @@ int main()
         soaManualWorld   = {};
     };
 
-    Sampler samplesUpdateMs(/* capacity */ 128u);
-    Sampler samplesDrawMs(/* capacity */ 128u);
+    Sampler samplesUpdateMs(/* capacity */ 64u);
+    Sampler samplesDrawMs(/* capacity */ 64u);
 
     // --- Main Loop ---
     while (!WindowShouldClose())
@@ -1289,160 +1288,164 @@ int main()
         float dt = simulationSpeed;
 
         // --- Update Step ---
-        const auto timeUpdateStart = GetTime();
-        rocketSpawnTimer += rocketSpawnRate * simulationSpeed;
-
-        size_t nRocketsToSpawn = 0u;
-
-        while (rocketSpawnTimer >= 1.f)
         {
-            ++nRocketsToSpawn;
-            rocketSpawnTimer -= 1.f;
-        }
+            const auto timeUpdateStart = GetTime();
+            rocketSpawnTimer += rocketSpawnRate * simulationSpeed;
 
-        switch (currentMode)
-        {
-            case Mode::OOP:
-                for (size_t i = 0; i < nRocketsToSpawn; ++i)
-                {
-                    auto& r        = oopWorld.addEntity<OOP::Rocket>();
-                    r.position     = rng.getVec2f({-500.f, 0.f}, {-100.f, 1050.f});
-                    r.velocity     = {};
-                    r.acceleration = {rng.getF(0.01f, 0.025f), 0.f};
-                    r.init();
-                }
-                oopWorld.update(dt);
-                oopWorld.cleanup();
-                break;
-            case Mode::AOS:
-                for (size_t i = 0; i < nRocketsToSpawn; ++i)
-                {
-                    aosWorld.addRocket({
-                        .position     = rng.getVec2f({-500.f, 0.f}, {-100.f, 1050.f}),
-                        .velocity     = {},
-                        .acceleration = {rng.getF(0.01f, 0.025f), 0.f},
-                    });
-                }
-                aosWorld.update(dt);
-                aosWorld.cleanup();
-                break;
-            case Mode::AOSImproved:
-                for (size_t i = 0; i < nRocketsToSpawn; ++i)
-                {
-                    aosImprovedWorld.addRocket({
-                        .position     = rng.getVec2f({-500.f, 0.f}, {-100.f, 1050.f}),
-                        .velocity     = {},
-                        .acceleration = {rng.getF(0.01f, 0.025f), 0.f},
-                    });
-                }
-                aosImprovedWorld.update(dt);
-                aosImprovedWorld.cleanup();
-                break;
-            case Mode::SOAManual:
-                for (size_t i = 0; i < nRocketsToSpawn; ++i)
-                {
-                    soaManualWorld.addRocket({
-                        .position     = rng.getVec2f({-500.f, 0.f}, {-100.f, 1050.f}),
-                        .velocity     = {},
-                        .acceleration = {rng.getF(0.01f, 0.025f), 0.f},
-                    });
-                }
-                soaManualWorld.update(dt);
-                soaManualWorld.cleanup();
-                break;
-        }
-        samplesUpdateMs.record((GetTime() - timeUpdateStart) * 1000.f);
+            size_t nRocketsToSpawn = 0u;
 
-        // --- Draw Step ---
-        const auto timeDrawStart = GetTime();
-        BeginDrawing();
-        ClearBackground(BLACK);
+            while (rocketSpawnTimer >= 1.f)
+            {
+                ++nRocketsToSpawn;
+                rocketSpawnTimer -= 1.f;
+            }
 
-        if (enableRendering)
             switch (currentMode)
             {
                 case Mode::OOP:
-                    oopWorld.draw();
+                    for (size_t i = 0; i < nRocketsToSpawn; ++i)
+                    {
+                        auto& r        = oopWorld.addEntity<OOP::Rocket>();
+                        r.position     = rng.getVec2f({-500.f, 0.f}, {-100.f, 1050.f});
+                        r.velocity     = {};
+                        r.acceleration = {rng.getF(0.01f, 0.025f), 0.f};
+                        r.init();
+                    }
+                    oopWorld.update(dt);
+                    oopWorld.cleanup();
                     break;
                 case Mode::AOS:
-                    aosWorld.draw();
+                    for (size_t i = 0; i < nRocketsToSpawn; ++i)
+                    {
+                        aosWorld.addRocket({
+                            .position     = rng.getVec2f({-500.f, 0.f}, {-100.f, 1050.f}),
+                            .velocity     = {},
+                            .acceleration = {rng.getF(0.01f, 0.025f), 0.f},
+                        });
+                    }
+                    aosWorld.update(dt);
+                    aosWorld.cleanup();
                     break;
                 case Mode::AOSImproved:
-                    aosImprovedWorld.draw();
+                    for (size_t i = 0; i < nRocketsToSpawn; ++i)
+                    {
+                        aosImprovedWorld.addRocket({
+                            .position     = rng.getVec2f({-500.f, 0.f}, {-100.f, 1050.f}),
+                            .velocity     = {},
+                            .acceleration = {rng.getF(0.01f, 0.025f), 0.f},
+                        });
+                    }
+                    aosImprovedWorld.update(dt);
+                    aosImprovedWorld.cleanup();
                     break;
                 case Mode::SOAManual:
-                    soaManualWorld.draw();
+                    for (size_t i = 0; i < nRocketsToSpawn; ++i)
+                    {
+                        soaManualWorld.addRocket({
+                            .position     = rng.getVec2f({-500.f, 0.f}, {-100.f, 1050.f}),
+                            .velocity     = {},
+                            .acceleration = {rng.getF(0.01f, 0.025f), 0.f},
+                        });
+                    }
+                    soaManualWorld.update(dt);
+                    soaManualWorld.cleanup();
                     break;
             }
-
-        // --- ImGui UI ---
-        rlImGuiBegin();
-        ImGui::SetNextWindowPos({10, 10}, ImGuiCond_Always);
-        ImGui::SetNextWindowSize({350, 300}, ImGuiCond_Always);
-        ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
-
-        ImGui::Text("FPS: %d", GetFPS());
-        ImGui::Text("Update Time (ms): %.3f", samplesUpdateMs.getAverage());
-        ImGui::Text("Draw Time (ms): %.3f", samplesDrawMs.getAverage());
-
-        size_t entityCount = 0;
-        switch (currentMode)
-        {
-            case Mode::OOP:
-                entityCount = oopWorld.entities.size();
-                break;
-            case Mode::AOS:
-                entityCount = aosWorld.rockets.size() + aosWorld.emitters.size() + aosWorld.particles.size();
-                break;
-            case Mode::AOSImproved:
-                entityCount = aosImprovedWorld.rockets.size() + aosImprovedWorld.smokeEmitters.size() +
-                              aosImprovedWorld.fireEmitters.size() + aosImprovedWorld.smokeParticles.size() +
-                              aosImprovedWorld.fireParticles.size();
-                break;
-            case Mode::SOAManual:
-                entityCount = soaManualWorld.rockets.size() + soaManualWorld.smokeEmitters.size() +
-                              soaManualWorld.fireEmitters.size() + soaManualWorld.smokeParticles.positions.size() +
-                              soaManualWorld.fireParticles.positions.size();
-                break;
+            samplesUpdateMs.record((GetTime() - timeUpdateStart) * 1000.f);
         }
-        ImGui::Text("Entity Count: %zu", entityCount);
-        ImGui::Separator();
 
-        if (ImGui::RadioButton("OOP", currentMode == Mode::OOP))
+        // --- Draw Step ---
         {
-            currentMode = Mode::OOP;
-            resetWorlds();
+            const auto timeDrawStart = GetTime();
+            BeginDrawing();
+            ClearBackground(BLACK);
+
+            if (enableRendering)
+                switch (currentMode)
+                {
+                    case Mode::OOP:
+                        oopWorld.draw();
+                        break;
+                    case Mode::AOS:
+                        aosWorld.draw();
+                        break;
+                    case Mode::AOSImproved:
+                        aosImprovedWorld.draw();
+                        break;
+                    case Mode::SOAManual:
+                        soaManualWorld.draw();
+                        break;
+                }
+
+            // --- ImGui UI ---
+            rlImGuiBegin();
+            ImGui::SetNextWindowPos({10, 10}, ImGuiCond_Always);
+            ImGui::SetNextWindowSize({350, 300}, ImGuiCond_Always);
+            ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+
+            ImGui::Text("FPS: %d", GetFPS());
+            ImGui::Text("Update Time (ms): %.3f", samplesUpdateMs.getAverage());
+            ImGui::Text("Draw Time (ms): %.3f", samplesDrawMs.getAverage());
+
+            size_t entityCount = 0;
+            switch (currentMode)
+            {
+                case Mode::OOP:
+                    entityCount = oopWorld.entities.size();
+                    break;
+                case Mode::AOS:
+                    entityCount = aosWorld.rockets.size() + aosWorld.emitters.size() + aosWorld.particles.size();
+                    break;
+                case Mode::AOSImproved:
+                    entityCount = aosImprovedWorld.rockets.size() + aosImprovedWorld.smokeEmitters.size() +
+                                  aosImprovedWorld.fireEmitters.size() + aosImprovedWorld.smokeParticles.size() +
+                                  aosImprovedWorld.fireParticles.size();
+                    break;
+                case Mode::SOAManual:
+                    entityCount = soaManualWorld.rockets.size() + soaManualWorld.smokeEmitters.size() +
+                                  soaManualWorld.fireEmitters.size() + soaManualWorld.smokeParticles.positions.size() +
+                                  soaManualWorld.fireParticles.positions.size();
+                    break;
+            }
+            ImGui::Text("Entity Count: %zu", entityCount);
+            ImGui::Separator();
+
+            if (ImGui::RadioButton("OOP", currentMode == Mode::OOP))
+            {
+                currentMode = Mode::OOP;
+                resetWorlds();
+            }
+            if (ImGui::RadioButton("AoS", currentMode == Mode::AOS))
+            {
+                currentMode = Mode::AOS;
+                resetWorlds();
+            }
+            if (ImGui::RadioButton("AoS (Improved)", currentMode == Mode::AOSImproved))
+            {
+                currentMode = Mode::AOSImproved;
+                resetWorlds();
+            }
+            if (ImGui::RadioButton("SoA (Manual)", currentMode == Mode::SOAManual))
+            {
+                currentMode = Mode::SOAManual;
+                resetWorlds();
+            }
+            ImGui::Separator();
+
+            ImGui::SliderFloat("Sim Speed", &simulationSpeed, 0.1f, 5.0f);
+            ImGui::SliderFloat("Spawn Rate", &rocketSpawnRate, 0.0f, 5.0f);
+
+            ImGui::Checkbox("Enable Rendering", &enableRendering);
+
+            if (ImGui::Button("Reset Simulation"))
+                resetWorlds();
+
+            ImGui::End();
+            rlImGuiEnd();
+
+            EndDrawing();
+            samplesDrawMs.record((GetTime() - timeDrawStart) * 1000.f);
         }
-        if (ImGui::RadioButton("AoS", currentMode == Mode::AOS))
-        {
-            currentMode = Mode::AOS;
-            resetWorlds();
-        }
-        if (ImGui::RadioButton("AoS (Improved)", currentMode == Mode::AOSImproved))
-        {
-            currentMode = Mode::AOSImproved;
-            resetWorlds();
-        }
-        if (ImGui::RadioButton("SoA (Manual)", currentMode == Mode::SOAManual))
-        {
-            currentMode = Mode::SOAManual;
-            resetWorlds();
-        }
-        ImGui::Separator();
-
-        ImGui::SliderFloat("Sim Speed", &simulationSpeed, 0.1f, 5.0f);
-        ImGui::SliderFloat("Spawn Rate", &rocketSpawnRate, 0.0f, 5.0f);
-
-        ImGui::Checkbox("Enable Rendering", &enableRendering);
-
-        if (ImGui::Button("Reset Simulation"))
-            resetWorlds();
-
-        ImGui::End();
-        rlImGuiEnd();
-
-        EndDrawing();
-        samplesDrawMs.record((GetTime() - timeDrawStart) * 1000.f);
     }
 
     // --- Cleanup ---
@@ -1451,5 +1454,6 @@ int main()
     UnloadTexture(txRocket);
     rlImGuiShutdown();
     CloseWindow();
+
     return 0;
 }
