@@ -412,23 +412,20 @@ void DrawSprite(Texture2D texture, Vector2 position, float scale, float rotation
 template <typename Vector, typename Predicate>
 [[gnu::always_inline]] inline constexpr size_t vectorSwapAndPopIf(Vector& vector, Predicate&& predicate)
 {
-    size_t nRemoved = 0u;
+    const size_t initialSize = vector.size();
+    size_t       currentSize = initialSize;
 
-    for (size_t i = 0u; i < vector.size();)
+    for (size_t i = currentSize; i-- > 0u;)
     {
         if (!predicate(vector[i]))
-        {
-            ++i;
             continue;
-        }
 
-        vector[i] = std::move(vector.back());
-        vector.pop_back();
-
-        ++nRemoved;
+        --currentSize;
+        vector[i] = std::move(vector[currentSize]);
     }
 
-    return nRemoved;
+    vector.resize(currentSize);
+    return static_cast<size_t>(initialSize - currentSize);
 }
 
 
@@ -1194,26 +1191,18 @@ struct World
     {
         const auto soaEraseIf = [&](ParticleSoA& soa, auto&& predicate)
         {
-            size_t n = soa.positions.size();
-            size_t i = 0u;
+            size_t currentSize = soa.positions.size();
 
-            while (i < n)
+            for (size_t i = currentSize; i-- > 0u;)
             {
                 if (!predicate(soa, i))
-                {
-                    ++i;
                     continue;
-                }
 
-                // Swap the current element with the last one, then reduce the container size.
-                --n;
-                soa.forEachVector([&](auto& vec) { vec[i] = std::move(vec[n]); });
-
-                // Do not increment `i`; check the new element at `i`.
+                --currentSize;
+                soa.forEachVector([&](auto& vec) { vec[i] = std::move(vec[currentSize]); });
             }
 
-            // Resize all columns to the new size.
-            soa.forEachVector([&](auto& vec) { vec.resize(n); });
+            soa.forEachVector([&](auto& vec) { vec.resize(currentSize); });
         };
 
         soaEraseIf(smokeParticles, [](const ParticleSoA& soa, const size_t i) { return soa.opacities[i] <= 0.f; });
