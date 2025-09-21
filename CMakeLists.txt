@@ -11,9 +11,9 @@ if(NOT EXISTS ${CMAKE_BINARY_DIR}/cmake/CPM.cmake)
 endif()
 include(${CMAKE_BINARY_DIR}/cmake/CPM.cmake)
 
-cpmaddpackage("gh:raysan5/raylib#5.5")
-cpmaddpackage("gh:ocornut/imgui#v1.92.3")
-cpmaddpackage("gh:raylib-extras/rlImGui#main")
+CPMAddPackage("gh:raysan5/raylib#5.5")
+CPMAddPackage("gh:ocornut/imgui#v1.92.3")
+CPMAddPackage("gh:raylib-extras/rlImGui#main")
 
 if(NOT TARGET imgui)
   set(IMGUI_SOURCES
