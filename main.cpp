@@ -1,3 +1,25 @@
+// Vittorio Romeo (2025)
+
+// CppCon 2025 Keynote
+// "More Speed & Simplicity: Practical Data-Oriented Design in C++"
+// https://www.youtube.com/watch?v=SzjJfKHygaQ
+
+// DISCLAIMER:
+// This is a RayLib implementation of my CppCon 2025 keynote demo.
+//
+// The original implementation uses VRSFML (my own fork of SFML) and
+// can be found here:
+// https://github.com/vittorioromeo/VRSFML/blob/dodtalk/examples/rockets/Rockets.cpp
+//
+// The rendering code in this implementation is significantly inferior
+// as it does not use VRSFML's automatic batching + instanced drawing.
+//
+// The simulation code should be identical -- rendering should be disabled
+// to get a fair comparison between OOP, AoS, and SoA.
+//
+// The code below is not polished or cleaned up, as it is not meant to be
+// a proper RayLib demo, but just a quick port of the original VRSFML demo.
+
 #include "imgui.h"
 #include "raylib.h"
 #include "raymath.h"
@@ -533,7 +555,7 @@ struct Particle : Entity
 
 
 ////////////////////////////////////////////////////////////
-struct SmokeParticle : Particle
+struct SmokeParticle final : Particle
 {
     void draw() override
     {
@@ -543,7 +565,7 @@ struct SmokeParticle : Particle
 
 
 ////////////////////////////////////////////////////////////
-struct FireParticle : Particle
+struct FireParticle final : Particle
 {
     void draw() override
     {
@@ -553,7 +575,7 @@ struct FireParticle : Particle
 
 
 ////////////////////////////////////////////////////////////
-struct SmokeEmitter : Emitter
+struct SmokeEmitter final : Emitter
 {
     void spawnParticle() override
     {
@@ -575,7 +597,7 @@ struct SmokeEmitter : Emitter
 
 
 ////////////////////////////////////////////////////////////
-struct FireEmitter : Emitter
+struct FireEmitter final : Emitter
 {
     void spawnParticle() override
     {
@@ -597,7 +619,7 @@ struct FireEmitter : Emitter
 
 
 ////////////////////////////////////////////////////////////
-struct Rocket : Entity
+struct Rocket final : Entity
 {
     SmokeEmitter* smokeEmitter = nullptr;
     FireEmitter*  fireEmitter  = nullptr;
@@ -723,15 +745,15 @@ struct World
 
     void addRocket(const Rocket& r)
     {
-        rockets.push_back(r);
+        auto& rocket = rockets.emplace_back(r);
 
-        rockets.back().smokeEmitterIdx = addEmitter({
+        rocket.smokeEmitterIdx = addEmitter({
             .spawnTimer = 0.f,
             .spawnRate  = 2.5f,
             .type       = ParticleType::Smoke,
         });
 
-        rockets.back().fireEmitterIdx = addEmitter({
+        rocket.fireEmitterIdx = addEmitter({
             .spawnTimer = 0.f,
             .spawnRate  = 1.25f,
             .type       = ParticleType::Fire,
@@ -909,9 +931,9 @@ struct World
 
     void addRocket(const Rocket& r)
     {
-        rockets.push_back(r);
-        rockets.back().smokeEmitterIdx = addEmitter(smokeEmitters, {.spawnTimer = 0.f, .spawnRate = 2.5f});
-        rockets.back().fireEmitterIdx  = addEmitter(fireEmitters, {.spawnTimer = 0.f, .spawnRate = 1.25f});
+        auto& rocket           = rockets.emplace_back(r);
+        rocket.smokeEmitterIdx = addEmitter(smokeEmitters, {.spawnTimer = 0.f, .spawnRate = 2.5f});
+        rocket.fireEmitterIdx  = addEmitter(fireEmitters, {.spawnTimer = 0.f, .spawnRate = 1.25f});
     }
 
     void update(float dt)
@@ -1058,31 +1080,6 @@ struct ParticleSoA
         f(opacityChanges);
         f(angularVelocities);
     }
-
-    void eraseAt(size_t index)
-    {
-        size_t last = positions.size() - 1;
-
-        positions[index]         = positions[last];
-        velocities[index]        = velocities[last];
-        accelerations[index]     = accelerations[last];
-        scales[index]            = scales[last];
-        opacities[index]         = opacities[last];
-        rotations[index]         = rotations[last];
-        scaleRates[index]        = scaleRates[last];
-        opacityChanges[index]    = opacityChanges[last];
-        angularVelocities[index] = angularVelocities[last];
-
-        positions.pop_back();
-        velocities.pop_back();
-        accelerations.pop_back();
-        scales.pop_back();
-        opacities.pop_back();
-        rotations.pop_back();
-        scaleRates.pop_back();
-        opacityChanges.pop_back();
-        angularVelocities.pop_back();
-    }
 };
 
 
@@ -1113,9 +1110,9 @@ struct World
 
     void addRocket(const Rocket& r)
     {
-        rockets.push_back(r);
-        rockets.back().smokeEmitterIdx = addEmitter(smokeEmitters, {.spawnTimer = 0.f, .spawnRate = 2.5f});
-        rockets.back().fireEmitterIdx  = addEmitter(fireEmitters, {.spawnTimer = 0.f, .spawnRate = 1.25f});
+        auto& rocket           = rockets.emplace_back(r);
+        rocket.smokeEmitterIdx = addEmitter(smokeEmitters, {.spawnTimer = 0.f, .spawnRate = 2.5f});
+        rocket.fireEmitterIdx  = addEmitter(fireEmitters, {.spawnTimer = 0.f, .spawnRate = 1.25f});
     }
 
     void update(float dt)
@@ -1195,16 +1192,32 @@ struct World
 
     void cleanup()
     {
-        const size_t nSmokeParticles = smokeParticles.positions.size();
-        const size_t nFireParticles  = fireParticles.positions.size();
+        const auto soaEraseIf = [&](ParticleSoA& soa, auto&& predicate)
+        {
+            size_t n = soa.positions.size();
+            size_t i = 0u;
 
-        for (size_t i = nSmokeParticles; i-- > 0;)
-            if (smokeParticles.opacities[i] <= 0.f)
-                smokeParticles.eraseAt(i);
+            while (i < n)
+            {
+                if (!predicate(soa, i))
+                {
+                    ++i;
+                    continue;
+                }
 
-        for (size_t i = nFireParticles; i-- > 0;)
-            if (fireParticles.opacities[i] <= 0.f)
-                fireParticles.eraseAt(i);
+                // Swap the current element with the last one, then reduce the container size.
+                --n;
+                soa.forEachVector([&](auto& vec) { vec[i] = std::move(vec[n]); });
+
+                // Do not increment `i`; check the new element at `i`.
+            }
+
+            // Resize all columns to the new size.
+            soa.forEachVector([&](auto& vec) { vec.resize(n); });
+        };
+
+        soaEraseIf(smokeParticles, [](const ParticleSoA& soa, const size_t i) { return soa.opacities[i] <= 0.f; });
+        soaEraseIf(fireParticles, [](const ParticleSoA& soa, const size_t i) { return soa.opacities[i] <= 0.f; });
 
         vectorSwapAndPopIf(rockets,
                            [&](const Rocket& r)
